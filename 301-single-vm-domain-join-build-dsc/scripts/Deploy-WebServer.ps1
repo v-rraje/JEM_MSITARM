@@ -23,8 +23,14 @@ Configuration DeployWebServer
                            "Web-Mgmt-Console", `
                            "WAS", `
                            "WAS-Process-Model", `
-                           "WAS-Config-APIs")){
-            
+                           "WAS-Config-APIs",`
+                           "NET-HTTP-Activation",`      
+                           "NET-Non-HTTP-Activ" ,`       
+                           "NET-WCF-HTTP-Activation45" ,`
+                           "NET-WCF-MSMQ-Activation45" ,`
+                           "NET-WCF-Pipe-Activation45" ,`
+                           "NET-WCF-TCP-Activation45"  ,`
+                           "NET-WCF-TCP-PortSharing45")){            
         WindowsFeature "$Feature$Number"{  
                         Ensure = “Present”  
                         Name = $Feature  
