@@ -23,7 +23,6 @@ try
     install-WindowsFeature Web-Net-Ext45 -IncludeManagementTools
     install-WindowsFeature Web-AppInit -IncludeManagementTools
     install-WindowsFeature Web-ASP -IncludeManagementTools
-    install-WindowsFeature Web-Asp-Net -IncludeManagementTools
     install-WindowsFeature Web-Asp-Net45 -IncludeManagementTools
     install-WindowsFeature Web-Includes -IncludeManagementTools
     install-WindowsFeature Web-WebSockets -IncludeManagementTools
