@@ -26,10 +26,10 @@
 
 param(
  [string]
- $resourceGroupName='jemdevrg3',
+ $resourceGroupName='jemdevrg9',
   
  [string]
- $StorageAccountName='jemlrssg3',
+ $StorageAccountName='jemdevsg9',
  
  [string]
  $resourceGroupLocation="West US",
