@@ -15,7 +15,7 @@
       "value": "redmond\\jem-dev"
     },
     "domainJoinPassword": {
-      "value": "May@2016"
+      "value": "Sep@2016"
     },
     "localAdmins": {
       "value": "redmond\\jeminfy"
@@ -51,7 +51,7 @@
       "value": "Standard_LRS"
     },
     "userImageStorageAccountName": {
-      "value": "akjemstr1"
+      "value": "jemdevsg10"
     },
     "numberOfInstances": {
       "value": 2
