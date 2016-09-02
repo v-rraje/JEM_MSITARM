@@ -115,18 +115,12 @@ try{
 
     # Start the deployment -Procuring Storage Account.
     Write-Host "Starting deployment For Storage Account Creation For '$StorageAccountName'";
-
-    $StorageAccount = @{
-        ResourceGroupName = $resourceGroupName;
-        Name = $StorageAccountName;
-        Location = $resourceGroupLocation;#TODO : check for the location.
-        }
-
+        
     $storageAcc=Get-AzureRmStorageAccount -ResourceGroupName $resourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
     if (!$storageAcc.StorageAccountName)
     {  
        Write-Host "Creating Storage Account... $StorageAccountName"
-       New-AzureRmStorageAccount @StorageAccount;
+       New-AzureRmStorageAccount -ResourceGroupName $resourceGroupName -AccountName $StorageAccountName -Location $resourceGroupLocation -Type 'Standard_LRS'
      }
      else
      {
