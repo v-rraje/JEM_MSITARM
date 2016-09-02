@@ -26,10 +26,10 @@
 
 param(
  [string]
- $resourceGroupName='jemdevrg3',
+ $resourceGroupName='jemdevrg9',
   
  [string]
- $StorageAccountName='jemlrssg3',
+ $StorageAccountName='jemdevsg9',
  
  [string]
  $resourceGroupLocation="West US",
@@ -119,7 +119,6 @@ try{
     $StorageAccount = @{
         ResourceGroupName = $resourceGroupName;
         Name = $StorageAccountName;
-        SkuName = 'Standard_LRS';
         Location = $resourceGroupLocation;#TODO : check for the location.
         }
 
@@ -138,6 +137,6 @@ catch [System.Exception]
 {
 	$tryError = $_.Exception
 	$message = $tryError.Message
-	Write-Host "Exception : $tryError Error: $message."
+	Write-Host "Unable to configure it on server-$RemoteComputers. Error: $message."
     break
 }
