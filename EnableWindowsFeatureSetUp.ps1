@@ -78,7 +78,7 @@ while(1)
    }
    else
    {
-        Write-Host $RemoteComputers "all the servers are alive"  -ForegroundColor Green
+        Write-Host $RemoteComputer " all the servers are alive" -ForegroundColor Green
         break;
    }
 }
