@@ -1,7 +1,7 @@
  Param
 (
 [String[]]
-$RemoteComputers = @('azwstjem9iis1','azwstjem9iis2','azwstjem10iis1','azwstjem10iis2'),
+$RemoteComputers,
 [String]
 $UserName='fareast\v-rraje',
 [String]
@@ -65,7 +65,7 @@ while(1)
         } 
         else 
         {
-            Write-Warning $RemoteComputer " seems dead not pinging" 
+            Write-Warning $RemoteComputer " seems dead not pinging " 
         }     
    } 
    
@@ -78,7 +78,7 @@ while(1)
    }
    else
    {
-        Write-Host $RemoteComputer " all the servers are alive" -ForegroundColor Green
+        Write-Host $RemoteComputers " all the servers are alive " 
         break;
    }
 }
