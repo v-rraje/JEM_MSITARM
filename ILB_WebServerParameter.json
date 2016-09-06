@@ -3,10 +3,10 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "vmName": {
-      "value": "aklbiis1"
+      "value": "ahlbiis1"
     },
     "localAdminUserName": {
-      "value": "aklbiis1"
+      "value": "ahlbiis1"
     },
  "localAdminPassword": {
       "value": "Aug2016^"
@@ -51,7 +51,7 @@
       "value": "Standard_LRS"
     },
     "userImageStorageAccountName": {
-      "value": "jemdevsg9"
+      "value": "jemdevsg10"
     },
     "numberOfInstances": {
       "value": 2
