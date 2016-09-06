@@ -1,9 +1,13 @@
  Param
 (
 [String[]]
-$RemoteComputers,
+$RemoteComputers,# = @('azwstjem9iis1','azwstjem9iis2','azwstjem10iis1','azwstjem10iis2'),
+[String]
+$UserName='fareast\v-rraje',
+[String]
+$PassWord='Aug2016^',
 [int]
-$WaitTime  # Every half an hour it will check for server availablity.
+$WaitTime=60  # Every half an hour it will check for server availablity.
 )
 function InstallComponents ()
 {
@@ -79,10 +83,12 @@ while(1)
    }
 }
 
+$PassWordEnc = convertto-securestring $PassWord -asplaintext -force
+$MyCred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $UserName,$PassWordEnc
+
 foreach($cmp in $RemoteComputers)
 {
-Invoke-Command -ComputerName $cmp -ScriptBlock ${function:InstallComponents} -ErrorAction Continue
+Invoke-Command -ComputerName $cmp -ScriptBlock ${function:InstallComponents} -Credential $MyCred -ErrorAction Continue
 }
 
 Start-Sleep -s 10
-
