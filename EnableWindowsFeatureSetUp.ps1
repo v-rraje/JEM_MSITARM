@@ -1,7 +1,7 @@
  Param
 (
 [String[]]
-$RemoteComputers,# = @('azwstjem9iis1','azwstjem9iis2','azwstjem10iis1','azwstjem10iis2'),
+$RemoteComputers = @('azwstjem9iis1','azwstjem9iis2','azwstjem10iis1','azwstjem10iis2'),
 [String]
 $UserName='fareast\v-rraje',
 [String]
@@ -61,11 +61,11 @@ while(1)
         if (test-Connection -ComputerName $RemoteComputer -Quiet ) 
         {  
             $cnt =$cnt+1
-            write-Host "$RemoteComputer is alive and Pinging " -ForegroundColor Green 
+            Write-Host $RemoteComputer " is alive and Pinging "  -ForegroundColor Green
         } 
         else 
         {
-            Write-Warning "$RemoteComputer seems dead not pinging" 
+            Write-Warning $RemoteComputer " seems dead not pinging" 
         }     
    } 
    
@@ -78,7 +78,7 @@ while(1)
    }
    else
    {
-        Write-Host "$RemoteComputers all the servers are alive"  -ForegroundColor Green
+        Write-Host $RemoteComputers "all the servers are alive"  -ForegroundColor Green
         break;
    }
 }
