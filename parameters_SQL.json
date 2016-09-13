@@ -3,13 +3,13 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "vmName": {
-      "value": "az1jemsql03"
+      "value": "agjemsql03"
     },
     "localAdminUserName": {
-      "value": "az1jemsql03"
+      "value": "raja"
     },
     "localAdminPassword": {
-      "value": "Sep@2016"
+      "value": "Aug2016^"
     },
     "domainJoinUserName": {
       "value": "fareast\\v-rraje"
@@ -63,7 +63,7 @@
       "value": "Standard_LRS"
     },
     "userImageStorageAccountName": {
-      "value": "azfjemstr01"
+      "value": "jemdevsg12"
     },
     "virtualNetwork": {
       "value": "MSFTRECORD-CORP-WUS-1"
