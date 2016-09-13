@@ -25,6 +25,8 @@ $IsQueueEnabled=0,
 $QueueNames
 )
 
+try
+{
 # Following modifies the Write-Verbose behavior to turn the messages on globally for this session
 $VerbosePreference = "Continue"
 
@@ -149,7 +151,7 @@ foreach($QueueName in $QueueNames)
         Write-Host "Private queue '$queuePath' has been created..."
     }
 }
-
+}
 catch [System.Exception]
 {
 	$tryError = $_.Exception
