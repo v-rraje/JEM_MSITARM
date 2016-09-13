@@ -9,25 +9,25 @@
       "value": "az1jemsql03"
     },
     "localAdminPassword": {
-      "value": "May@2016"
+      "value": "Sep@2016"
     },
     "domainJoinUserName": {
       "value": "fareast\\v-rraje"
     },
     "domainJoinPassword": {
-      "value": "May2016^"
+      "value": "Aug2016^"
     },
     "SQLServerAccount": {
      "value": "redmond\\jem-dev"
     },
     "SQLServerPassword": {
-     "value": "May@2016"
+     "value": "Sep@2016"
     },
     "SQLAgentAccount": {
      "value": "redmond\\jem-dev"
     },
     "SQLAgentPassword": {
-      "value": "May@2016"
+      "value": "Sep@2016"
     },
     "SQLAdmins": {
       "value": "redmond\\jeminfy"
