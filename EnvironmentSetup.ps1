@@ -22,7 +22,9 @@ $servicePaths,
 $IsQueueEnabled=0,
 [AllowEmptyCollection()]
 [String[]]
-$QueueNames
+$QueueNames,
+[String]
+$AppServerPath='E:\inetpub\wwwroot\JemDev'
 )
 
 try
@@ -93,6 +95,26 @@ foreach($iisAppName in $iisAppNames)
     if((Get-WebApplication -Name $iisAppName) -eq $null -and (Test-Path $appPath$iisAppName) -eq $true)
     {
         write-host "Creating Web Application ..."
+
+        # Copy the app.config and svc file from inside bin and keep pot side
+        Copy-item $AppServerPath\$iisAppName\bin\*.svc $AppServerPath\$iisAppName
+        Copy-item $AppServerPath\$iisAppName\bin\App.config $AppServerPath\$iisAppName
+
+        # Rename the app.config file to web.config file
+        Rename-Item  $AppServerPath\$iisAppName\App.config web.config
+
+        $oldSvcFilePath = "$AppServerPath\$iisAppName\bin\*.svc"
+        $oldAppConfigPath = "$AppServerPath\$iisAppName\bin\App.config"
+
+        # if New files are placed deplete the files from bin folder.
+        if (Test-path ($oldAppConfigPath)) {
+            Remove-item ($oldAppConfigPath)
+        }
+
+        if (Test-path ($oldSvcFilePath)) {
+            Remove-item ($oldSvcFilePath)
+        }
+
         ConvertTo-WebApplication -ApplicationPool $iisAppPoolName $appPath$iisAppName;
     }
     else
