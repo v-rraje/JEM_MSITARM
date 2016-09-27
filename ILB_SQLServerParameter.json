@@ -39,7 +39,7 @@
     "domainName": {
       "value": "redmond.corp.microsoft.com"},
     "env": {
-      "value": "dev"
+      "value": "test"
     },
     "orgID": {
       "value": "500368"
@@ -72,9 +72,9 @@
       "value": "ERNetwork"
     },
     "vmSize": {
-      "value": "Standard_D4_v2"
+      "value": "Standard_D3_v2"
     },"Diskconfig": {
-      "value": "SQLStd"
+      "value": "SQLPrem"
     },
     "DiskSize": {
       "value": 400
