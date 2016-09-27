@@ -11,28 +11,28 @@
     "localAdminPassword": {
       "value": "Aug2016^"
     },"domainJoinUserName": {
-   "value": "redmond\\jem-dev"
+   "value": "redmond\\jemtest"
     },
     "domainJoinPassword": {
       "value": "Sep@2016"
     },
     "localAdmins": {
-      "value": "redmond\\jem-dev"
+      "value": "redmond\\jemtest"
     },
     "SQLServerAccount": {
-      "value": "redmond\\jem-dev"
+      "value": "redmond\\jemtest"
     },
     "SQLServerPassword": {
-      "value": "Sep@2016"
+      "value": "Password@2016"
     },
     "SQLAgentAccount": {
-      "value": "redmond\\jem-dev"
+      "value": "redmond\\jemtest"
     },
     "SQLAgentPassword": {
-      "value": "Sep@2016"
+      "value": ""
     },
     "SQLAdmins": {
-      "value": "redmond\\jem-dev"
+      "value": "redmond\\jemtest"
     },
     "appID": {"value": "ICTO-3924"
     },
@@ -60,7 +60,7 @@
       "value": "Standard_LRS"
     },
     "userImageStorageAccountName": {
-      "value": "jemlrssg4"
+      "value": "jemtstsg12"
     },
     "numberOfInstances": {
       "value": 2
