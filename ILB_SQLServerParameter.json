@@ -13,6 +13,9 @@
     },"domainJoinUserName": {
    "value": "redmond\\jemtest"
     },
+    "AOAGListenerName": {
+      "value": ""
+    },
     "domainJoinPassword": {
       "value": "Sep@2016"
     },
