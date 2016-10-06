@@ -1,4 +1,4 @@
-﻿ Param
+ Param
 (
 [String[]]
 $RemoteComputers=@('azwstjem9iis1','azwstjem9iis2','azwstjem10iis1','azwstjem10iis2'),
