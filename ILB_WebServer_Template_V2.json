@@ -344,6 +344,9 @@
           "localAdmins": {
             "value": "[parameters('localAdmins')]"
           },
+          "SQLAdmins": {
+            "value": ""
+          },
           "vmName": {
             "value": "[parameters('vmName')]"
           },
