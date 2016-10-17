@@ -2,7 +2,7 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
   "parameters": {
-      "vmName": {
+    "vmName": {
       "value": ""
     },
     "localAdminUserName": {
@@ -21,6 +21,18 @@
       "value": ""
     },
     "SQLAdmins": {
+      "value": ""
+    },
+    "SQLServerAccount": {
+      "value": ""
+    },
+    "SQLServerPassword": {
+      "value": ""
+    },
+    "SQLAgentAccount": {
+      "value": ""
+    },
+    "SQLAgentPassword": {
       "value": ""
     },
     "appID": {
@@ -56,17 +68,20 @@
     "numberOfInstances": {
       "value": 1
     },
-     "virtualNetwork": {
+    "virtualNetwork": {
       "value": ""
     },
     "vnetResourceGroup": {
       "value": ""
     },
-    "vmSize": {
-      "value": "Standard_A2"
+    "subnetName": {
+      "value": ""
     },
-    "ServerRole": {
-      "value": "App"
+    "vmSize": {
+      "value": ""
+    },
+    "DiskConfig": {
+      "value": "Win"
     },
     "DiskSize": {
       "value": "200"

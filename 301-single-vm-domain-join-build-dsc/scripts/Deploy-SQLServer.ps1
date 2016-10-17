@@ -11,14 +11,27 @@ Configuration DeploySQLServer
    [string] $BackupPath="E:\MSSqlServer\MSSQL\bak",
    [Parameter(Mandatory)]
    [string] $TempDBPath="T:\MSSqlServer\MSSQL\DATA",
+   
+   [parameter(Mandatory=$true)]
+   [string] $SQLServerAccount,
+   [parameter(Mandatory=$true)]
+   [string] $SQLServerPassword,
+   [parameter(Mandatory=$true)]
+   [string] $SQLAgentAccount,
+   [parameter(Mandatory=$true)]
+   [string] $SQLAgentPassword,
+   [parameter(Mandatory=$true)]
+   [string] $SQLAdmin,
+   [parameter(Mandatory=$true)]
+   [string] $SQLAdminPwd,
+
    [Parameter(Mandatory)]
    [string] $baseurl="https://raw.githubusercontent.com/Microsoft/MSITARM/"
   )
 
   Node localhost
   {
-
-    
+  
 
     $InstanceName =Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server' -Name InstalledInstances | Select-Object -ExpandProperty InstalledInstances | ?{$_ -eq 'MSSQLSERVER'}
     $InstanceFullName = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL' -Name $InstanceName | Select-Object -ExpandProperty $InstanceName;
@@ -27,6 +40,10 @@ Configuration DeploySQLServer
     $BackupPath = $BackupPath.replace('MSSqlServer',$InstanceFullName)
     $TempDBPath = $TempDBPath.replace('MSSqlServer',$InstanceFullName)
     $ErrorPath = $(split-path $("$dataPath") -Parent)+"\Log"
+
+    #region "global functions"
+
+    #endRegion
 
   	    Script ConfigureEventLog{
             GetScript = {
@@ -54,13 +71,51 @@ Configuration DeploySQLServer
             }
 
         }
+         Script DriveCheck{
+            GetScript = {
+                @{
+                }
+            }
+            SetScript = {
+                try {
+                    $diskArray = Get-Partition
+                    $diskArray | select DriveLetter | ? {$_ -eq 'H'}
+
+                    if($diskArray -eq $nothing) {
+
+                        Write-EventLog -LogName Application -source AzureArmTemplates -eventID 1000 -entrytype Information -message "H Drive not found"
+                        throw "Drives not available as expected"
+
+                        }else{Write-EventLog -LogName Application -source AzureArmTemplates -eventID 1000 -entrytype Information -message "Drives Ready"}
+
+                    } catch{}
+
+            }
+            TestScript = {
+                 try {
+                    $diskArray = Get-Partition
+                    $diskArray | select DriveLetter | ? {$_ -eq 'H'}
+
+                if($diskArray -eq $nothing) {                                    
+                        $pass = $true
+                    }else{
+                        $pass = $false
+                    }
+
+                } catch{}
+              
+              return $pass
+            }
+            DependsOn = "[Script]ConfigureEventLog"
+        }
 
         File StartupPath {
             Type = 'Directory'
             DestinationPath = "C:\SQLStartup"
             Ensure = "Present"
-            DependsOn = "[Script]ConfigureEventLog"
+            DependsOn = "[Script]DriveCheck"
         }
+
         Script ConfigureStartupPath{
             GetScript = {
                 @{
@@ -2810,6 +2865,418 @@ Configuration DeploySQLServer
             DependsOn = "[Script]ConfigureMasterLogFile"
         }
 
-}
+        Script ConfigureExtendedSprocs {
+            GetScript = {
+                @{
+                }
+            }
+            SetScript = {
+                if($(test-path -path C:\SQLStartup) -eq $true) {
+               
+                    $WebClient = New-Object System.Net.WebClient
+                    $WebClient.DownloadFile($($Using:baseURL) + "scripts/PostConfiguration.sql","C:\SQLStartup\PostConfiguration.sql")
+
+                    if($(test-path -path C:\SQLStartup\PostConfiguration.sql) -eq $true) {
+                         $sqlInstances = gwmi win32_service -computerName localhost -ErrorAction SilentlyContinue | ? { $_.Name -match "mssql*" -and $_.PathName -match "sqlservr.exe" } 
+   
+                    if($sqlInstances -ne $null){
+
+                        ############################################
+                        try {
+               
+                             write-verbose "Extended Sprocs on $server"
+                                                    
+                            Invoke-SQLCmd -ServerInstance $($env:computername) -Database 'master' -ConnectionTimeout 300 -QueryTimeout 600 -inputfile "C:\SQLStartup\PostConfiguration.sql"                       
+
+                        } catch{
+                            [string]$errorMessage = $_.Exception.Message
+                            if([string]::IsNullOrEmpty($errorMessage) -ne $true) {
+                                Write-EventLog -LogName Application -source AzureArmTemplates -eventID 5001 -entrytype Error -message "PostConfiguration.SQL: $errorMessage"
+                            }else {$error}
+                            throw $errorMessage
+                        }
+                     }
+                 }
+              }
+            }
+            TestScript = { 
+                $pass=$false
+                if($(test-path -path "C:\SQLStartup\PostConfiguration.sql") -eq $true) {
+                         $pass=$true           
+                } else {
+                    $pass=$false
+                }
+
+                return $Pass
+            }
+            DependsOn = "[Script]ConfigureStartupJob"
+        }
+
+          Script ConfigureSQLAccount{
+            GetScript = {
+                @{
+                }
+            }
+            SetScript = {
+
+                $sqlInstances = gwmi win32_service -computerName localhost -ErrorAction SilentlyContinue | ? { $_.Name -match "mssql*" -and $_.PathName -match "sqlservr.exe" } 
+                $ret = $false
+
+                if($sqlInstances -ne $null){
+                    try {                            
+                        
+                        [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.ConnectionInfo") 
+                        [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO")
+                        [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended")
+
+                        $srvConn = New-Object Microsoft.SqlServer.Management.Common.ServerConnection $env:computername
+ 
+                        $NtLogin = $($using:SQLServerAccount.UserName) 
+
+                        $srvConn.connect();
+                        $srv = New-Object Microsoft.SqlServer.Management.Smo.Server $srvConn
+            
+                        $login = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Login -ArgumentList $Srv, $NtLogin
+                        $login.LoginType = 'WindowsUser'
+                        $login.PasswordExpirationEnabled = $false
+                        $login.Create()
+
+                        #  Next two lines to give the new login a server role, optional
+
+                        $login.AddToRole('sysadmin')
+                        $login.Alter()
+
+                    } catch{
+                        [string]$errorMessage = $Error[0].Exception
+                        if([string]::IsNullOrEmpty($errorMessage) -ne $true) {
+                            Write-EventLog -LogName Application -source AzureArmTemplates -eventID 3001 -entrytype Error -message "ConfigureBuiltInAdmins: $errorMessage"
+                        } else {$errorMessage}
+                    }
+                }
+            }
+            TestScript = { 
+                try{
+                    $sqlInstances = gwmi win32_service -computerName localhost -ErrorAction SilentlyContinue | ? { $_.Name -match "mssql*" -and $_.PathName -match "sqlservr.exe" } 
+
+                    if($sqlInstances -ne $null){
+
+                        $pass=$false
+                        $NtLogin = $($using:SQLServerAccount.UserName) 
+                        $q = "select count(*) as Instances from sys.syslogins where name='$ntLogin'"
+				        Invoke-Sqlcmd -Database master -Query $q            
+                        if(($q.Instances) -eq 1) {$pass=$true}else{$pass=$false} 
+                     
+                     }else{$pass=$false}
+                  
+                }catch{$pass=$false}
+            
+                if($Pass){
+                    Write-EventLog -LogName Application -source AzureArmTemplates -eventID 1000 -entrytype Information -message "ConfigureSQLAccount $pass"
+                }else{
+                    Write-EventLog -LogName Application -source AzureArmTemplates -eventID 1001 -entrytype Warning -message "ConfigureSQLAccount $pass"
+                }
+
+             return $pass
+            }
+            DependsOn = "[Script]ConfigureExtendedSprocs"
+        }
+
+        Script ConfigureSQLServerService{
+            GetScript = {
+                @{
+                }
+            }
+            SetScript = {
+            
+                if($using:SQLServerAccount -and $using:SQLServerPassword) {
+                                
+                    ############################################             
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.ConnectionInfo") 
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO")
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended")
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement")
+                    ############################################
+
+                    try {
+
+                                                
+                        $wmi = new-object ("Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer") $env:computername
+                           
+                        #disabling these until the user decides                     
+                        $SQLsvc = get-service| where {$_.DisplayName -match 'SQL' -and ($_.name -ne 'MSSQLSERVER' -and $_.Name -ne 'SQLSERVERAGENT' -and $_.Name -ne 'SQLWriter')}
+                        $SQLsvc  | %{Set-Service $_.Name -StartupType disabled -Status Stopped}
+                        
+                        #set sql Service
+                      
+                        $svc = $wmi.services | where {$_.Type -eq 'SqlServer'} 
+                        $svc.SetServiceAccount($using:SQLServerAccount,$using:SQLServerPassword)
+                        
+                        $svc = $wmi.services | where {$_.DisplayName -match 'SQL'}
+
+                        $svc | ft  name,displayname,serviceaccount,startmode,serviceState  -AutoSize
+                        
+                    } catch {}
+                }
+
+            }
+            TestScript = { 
+                $pass=$false
+                
+                if($using:SQLServerAccount -and $using:SQLServerPassword) {
+                                        
+                    ############################################             
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.ConnectionInfo") 
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO")
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended")
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement")
+                    ############################################
+
+                    $wmi = new-object ("Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer") $env:computername
+                    $svc = $wmi.services | where {$_.Type -eq 'SqlServer'} 
+                    
+                        try {
+                            $pass = $($svc.ServiceAccount -eq $using:SQLServerAccount)
+                        } catch {
+                            $pass = $false
+                        }
+                    }
+
+            return $pass
+            }
+            DependsOn = "[Script]ConfigureSQLAccount"
+        }
+
+        Script ConfigureSQLAgentService{
+            GetScript = {
+                @{
+                }
+            }
+            SetScript = {
+            
+                    ############################################             
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.ConnectionInfo") 
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO")
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended")
+                    $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement")
+                    ############################################
+
+                if($using:SQLAgentAccount -and $using:SQLAgentPassword) {
+                    try {
+                        $wmi = new-object ("Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer") $env:computername
+                        $svc = $wmi.services | where {$_.Type -eq 'SqlAgent'} 
+                        $svc.Start()
+                        $svc.SetServiceAccount($using:SQLAgentAccount,$using:SQLAgentPassword)
+
+                    } catch {}
+                }
+
+            }
+            TestScript = { 
+                $pass=$false
+
+                if($using:SQLAgentAccount -and $using:SQLAgentPassword) {
+                    
+                        ############################################             
+                        $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.ConnectionInfo") 
+                        $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO")
+                        $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended")
+                        $null=[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement")
+                        ############################################
+
+                        
+                        $wmi = new-object ("Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer") $env:computername
+                        $svc = $wmi.services | where {$_.Type -eq 'SqlAgent'} 
+                        $svc.Start()
+
+                        try {
+                            $pass = $($svc.ServiceAccount -eq $using:SQLAgentAccount)
+                        } catch {
+                            $pass = $false
+                        }
+                    }
+            return $pass
+            }
+            DependsOn = "[Script]ConfigureSQLServerService"
+        }
+
+        Script ConfigureLocalPolicy{
+            GetScript = {
+                @{
+                }
+            }
+            SetScript = {
+  
+            #################Policy Changes####################################
+
+            $ret1=  Add-LoginToLocalPrivilege "NT Service\Mssqlserver" "SeLockMemoryPrivilege"
+
+            $ret2=  Add-LoginToLocalPrivilege "NT Service\Mssqlserver" "SeManageVolumePrivilege"
+
+            }
+            TestScript = { 
+                  
+               ###############################################################          
+  
+                    function Add-LoginToLocalPrivilege {
+
+                        #Specify the default parameterset
+                        [CmdletBinding(DefaultParametersetName="JointNames", SupportsShouldProcess=$true, ConfirmImpact='High')]
+                        param
+                            (
+                        [parameter(
+                        Mandatory=$true, 
+                        Position=0,
+                        ValueFromPipeline= $true
+                                    )]
+                        [string] $DomainAccount,
+
+                        [parameter(Mandatory=$true, Position=2)]
+                        [ValidateSet("SeManageVolumePrivilege", "SeLockMemoryPrivilege")]
+                        [string] $Privilege,
+
+                        [parameter(Mandatory=$false, Position=3)]
+                        [string] $TemporaryFolderPath = $env:USERPROFILE
+        
+                        )
+
+                            #Determine which parameter set was used
+                            switch ($PsCmdlet.ParameterSetName)
+                            {
+                            "SplitNames"
+                                                    { 
+                        #If SplitNames was used, combine the names into a single string
+                                    Write-Verbose "Domain and Account provided - combining for rest of script."
+                                    $DomainAccount = "$Domain`\$Account"
+                                }
+                            "JointNames"
+                                                {
+                        Write-Verbose "Domain\Account combination provided."
+                                    #Need to do nothing more, the parameter passed is sufficient.
+                                }
+                            }
+
+                        Write-Verbose "Adding $DomainAccount to $Privilege"
+
+                            Write-Verbose "Verifying that export file does not exist."
+                            #Clean Up any files that may be hanging around.
+                            Remove-TempFiles
+    
+                        Write-Verbose "Executing secedit and sending to $TemporaryFolderPath"
+                            #Use secedit (built in command in windows) to export current User Rights Assignment
+                            $SeceditResults = secedit /export /areas USER_RIGHTS /cfg $TemporaryFolderPath\UserRightsAsTheyExist.inf
+
+                        #Make certain export was successful
+                        if($SeceditResults[$SeceditResults.Count-2] -eq "The task has completed successfully.")
+                        {
+
+                        Write-Verbose "Secedit export was successful, proceeding to re-import"
+                                #Save out the header of the file to be imported
+        
+                        Write-Verbose "Save out header for $TemporaryFolderPath`\ApplyUserRights.inf"
+        
+                        "[Unicode]
+                        Unicode=yes
+                        [Version]
+                        signature=`"`$CHICAGO`$`"
+                        Revision=1
+                        [Privilege Rights]" | Out-File $TemporaryFolderPath\ApplyUserRights.inf -Force -WhatIf:$false
+                                    
+                        #Bring the exported config file in as an array
+                        Write-Verbose "Importing the exported secedit file."
+                        $SecurityPolicyExport = Get-Content $TemporaryFolderPath\UserRightsAsTheyExist.inf
+
+                        #enumerate over each of these files, looking for the Perform Volume Maintenance Tasks privilege
+                       [Boolean]$isFound = $false
+       
+                        foreach($line in $SecurityPolicyExport) {
+
+                         if($line -like "$Privilege`*")  {
+
+                                Write-Verbose "Line with the $Privilege found in export, appending $DomainAccount to it"
+                                #Add the current domain\user to the list
+                                $line = $line + ",$DomainAccount"
+                                #output line, with all old + new accounts to re-import
+                                $line | Out-File $TemporaryFolderPath\ApplyUserRights.inf -Append -WhatIf:$false
+
+                                Write-verbose "Added $DomainAccount to $Privilege"                            
+                                $isFound = $true
+                            }
+                        }
+
+                        if($isFound -eq $false) {
+                            #If the particular command we are looking for can't be found, create it to be imported.
+                            Write-Verbose "No line found for $Privilege - Adding new line for $DomainAccount"
+                            "$Privilege`=$DomainAccount" | Out-File $TemporaryFolderPath\ApplyUserRights.inf -Append -WhatIf:$false
+                        }
+
+                            #Import the new .inf into the local security policy.
+        
+                            Write-Verbose "Importing $TemporaryfolderPath\ApplyUserRighs.inf"
+                            $SeceditApplyResults = SECEDIT /configure /db secedit.sdb /cfg $TemporaryFolderPath\ApplyUserRights.inf 
+
+                            #Verify that update was successful (string reading, blegh.)
+                            if($SeceditApplyResults[$SeceditApplyResults.Count-2] -eq "The task has completed successfully.")
+                            {
+                                #Success, return true
+                                Write-Verbose "Import was successful."
+                                Write-Output $true
+                            }
+                            else
+                            {
+                                #Import failed for some reason
+                                Write-Verbose "Import from $TemporaryFolderPath\ApplyUserRights.inf failed."
+                                Write-Output $false
+                                throw -Message "The import from$TemporaryFolderPath\ApplyUserRights using secedit failed. Full Text Below:
+                                $SeceditApplyResults)"
+                            }
+
+                        }
+                        else
+                            {
+                                #Export failed for some reason.
+                                Write-Verbose "Export to $TemporaryFolderPath\UserRightsAsTheyExist.inf failed."
+                                Write-Output $false
+                                throw -Message "The export to $TemporaryFolderPath\UserRightsAsTheyExist.inf from secedit failed. Full Text Below: $SeceditResults)"
+        
+                        }
+
+                        Write-Verbose "Cleaning up temporary files that were created."
+                            #Delete the two temp files we created.
+                            Remove-TempFiles
+    
+                        }
+
+                    function Remove-TempFiles {
+
+                        #Evaluate whether the ApplyUserRights.inf file exists
+                        if(Test-Path $TemporaryFolderPath\ApplyUserRights.inf)
+                        {
+                            #Remove it if it does.
+                            Write-Verbose "Removing $TemporaryFolderPath`\ApplyUserRights.inf"
+                            Remove-Item $TemporaryFolderPath\ApplyUserRights.inf -Force -WhatIf:$false
+                        }
+
+                        #Evaluate whether the UserRightsAsTheyExists.inf file exists
+                        if(Test-Path $TemporaryFolderPath\UserRightsAsTheyExist.inf)
+                        {
+                            #Remove it if it does.
+                            Write-Verbose "Removing $TemporaryFolderPath\UserRightsAsTheyExist.inf"
+                            Remove-Item $TemporaryFolderPath\UserRightsAsTheyExist.inf -Force -WhatIf:$false
+                        }
+                    }
+  
+               ###############################################################
+             
+            #################Policy Changes####################################
+
+            $ret1=  Add-LoginToLocalPrivilege "NT Service\Mssqlserver" "SeLockMemoryPrivilege"
+
+            $ret2=  Add-LoginToLocalPrivilege "NT Service\Mssqlserver" "SeManageVolumePrivilege"
+            
+            return $($ret1 -and $ret2)
+            }
+             DependsOn = "[Script]ConfigureSQLAgentService"
+       }
+    }
 
 }
